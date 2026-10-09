@@ -1381,7 +1381,7 @@
       pointer-events: none;
     }
   </style>
-</head>
+<style>.grp-overlay,.grp-hbtn{display:none!important}</style></head>
 
 <body>
 
@@ -1403,15 +1403,7 @@
         </svg>
         <span>新版 Coverly</span>
       </a>
-      <button class="grp-hbtn" aria-label="加入烁皓 AI 交流群" onclick="grpOpen()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-        </svg>
-        <span>AI 交流群</span>
-      </button>
+      
       <button class="btn" id="btn-edit-toggle" onclick="setCanvasEditable(!editOn)">画布编辑：开</button>
       <button class="btn" onclick="resetAll()">重置</button>
       <button class="btn" id="btn-copy-draft" onclick="copyDraftConfig()">Copy Config</button>
