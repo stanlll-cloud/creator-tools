@@ -502,49 +502,5 @@
     }
   </style>
 
-  <div class="grp-overlay" id="grp-overlay" onclick="grpBackdrop(event)">
-    <div class="grp-modal" role="dialog" aria-modal="true" aria-label="烁皓 AI 交流群">
-      <button class="grp-close" aria-label="关闭" onclick="grpClose()">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-      </button>
-      <h2 class="grp-title">烁皓 AI 交流群</h2>
-      <p class="grp-desc">我是烁皓，一个天天用 AI 做产品、搞钱的独立开发者，建了一个「付费 AI 交流群」。<br>💰 入群早鸟价 ￥29，群每满 10 人涨 10 元：29 → 39 → 49…… 封顶 129，越早进越便宜。<br>想进的 👉 加我微信 <button class="grp-wx" type="button" onclick="grpCopyWx()" title="点击复制 hao_dev">hao_dev</button>（备注「入群」），我拉你进群。</p>
-      <div class="grp-qr">
-        <img src="images/wechat-qr.png" alt="烁皓微信二维码">
-      </div>
-    </div>
-  </div>
-
-  <div class="grp-toast" id="grp-toast">复制成功 ✓</div>
-
-  <script>
-    function grpOpen() { document.getElementById('grp-overlay').classList.add('open'); }
-    function grpClose() { document.getElementById('grp-overlay').classList.remove('open'); }
-    function grpBackdrop(e) { if (e.target === e.currentTarget) grpClose(); }
-    function grpCopyWx() {
-      const done = () => grpToast('复制成功 ✓');
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText('hao_dev').then(done).catch(() => grpFallbackCopy('hao_dev', done));
-      } else { grpFallbackCopy('hao_dev', done); }
-    }
-    function grpToast(msg, type) {
-      const t = document.getElementById('grp-toast');
-      if (!t) return;
-      t.textContent = msg;
-      t.classList.toggle('error', type === 'error');
-      t.classList.add('show');
-      clearTimeout(t._timer);
-      t._timer = setTimeout(() => t.classList.remove('show'), type === 'error' ? 2600 : 1600);
-    }
-    function grpFallbackCopy(text, cb) {
-      const ta = document.createElement('textarea');
-      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
-      document.body.appendChild(ta); ta.select();
-      try { document.execCommand('copy'); cb(); } catch (_) {}
-      document.body.removeChild(ta);
-    }
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') grpClose(); });
-  </script>
-
 </body>
 </html>

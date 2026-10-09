@@ -272,7 +272,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`\n烁皓工具 · 公众号发布服务`);
+  console.log(`\n创作工具箱 · 公众号发布服务`);
   console.log(`  本地地址: http://127.0.0.1:${PORT}/`);
   console.log(`  打开工具: http://127.0.0.1:${PORT}/md-to-wechat.html`);
   console.log(`  凭据状态: ${APPID && SECRET ? 'APPID/SECRET 已配置 ✓' : '⚠️  未配置，去 server/.env 填写'}`);
