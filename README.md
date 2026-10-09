@@ -30,3 +30,5 @@ PDF 为逐页图像排版版，PPTX 正文是独立可编辑文本框，图片�
 ### 第三方组件
 
 浏览器导出使用 PptxGenJS 3.12.0、html2canvas 1.4.1、jsPDF 2.5.2，许可证位于 vendor/。
+
+PDF、PPTX 与页面预览共用 export-layout.mjs 的 A4 纵版坐标和分页；连续插图按比例拼排，PPT 使用原生文字与图片对象。不同电脑字体替换可能产生字形差异。

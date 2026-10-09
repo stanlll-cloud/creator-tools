@@ -1,3 +1,4 @@
+import {PAGE,buildLayout} from './export-layout.mjs?v=3';
 const API='https://creator-tools-x-reader.stanlll-creator-tools.workers.dev';
 const $=id=>document.getElementById(id);
 let state={source:'',blocks:[],warnings:[],images:[]},busy=false,reading=false;
@@ -6,13 +7,23 @@ function lock(on){busy=on;for(const id of ['pdf','ppt','read','manual','uploads'
 function name(ext){return ($('title').value||'X文章').replace(/[\\/:*?"<>|\x00-\x1f]/g,'_').slice(0,70)+'.'+ext;}
 function textChunks(text,max=380){const chars=Array.from(text),out=[];for(let i=0;i<chars.length;i+=max)out.push(chars.slice(i,i+max).join(''));return out;}
 function ordered(){const out=[];for(const part of $('body').value.split(/(\{\{image:\d+\}\})/)){const m=part.match(/^\{\{image:(\d+)\}\}$/);if(m){const image=state.images[Number(m[1])-1];if(image)out.push({type:'image',...image});}else for(const t of part.split(/\n\s*\n/)){if(t.trim())out.push({type:'text',text:t.trim()});}}return out;}
+const measuring=document.createElement('canvas').getContext('2d');
+const FONT='"PingFang SC", "Microsoft YaHei", Arial, sans-serif';
+function layout(){return buildLayout({title:$('title').value,author:$('author').value,source:state.source,blocks:ordered()},(text,size,bold)=>{measuring.font=`${bold?'bold ':''}${size}px ${FONT}`;return measuring.measureText(text).width;});}
 function render(){
- const paper=$('paper');paper.replaceChildren();const h=document.createElement('h1');h.textContent=$('title').value||'未命名文章';paper.append(h);
- const author=document.createElement('p');author.className='source';author.textContent=$('author').value;paper.append(author);
- for(const b of ordered()){if(b.type==='image'){if(b.data){const im=document.createElement('img');im.src=b.data;im.alt=b.alt||'文章插图';paper.append(im);}else{const p=document.createElement('p');p.textContent='[图片下载失败]';paper.append(p);}}else{const p=document.createElement('p');p.textContent=b.text;paper.append(p);}}
- if(state.source){const p=document.createElement('p');p.className='source';p.textContent='原文：'+state.source;paper.append(p);}
- const count=ordered().filter(b=>b.type==='image');$('count').textContent=`${count.filter(b=>b.data).length}/${count.length} 张图片可用`;
+ const paper=$('paper');paper.replaceChildren();
+ for(const elements of layout()){
+  const shell=document.createElement('div');shell.className='page-shell';
+  const page=document.createElement('div');page.className='shared-page';
+  for(const e of elements){const el=document.createElement(e.type==='image'?'img':'div');
+   if(e.type==='image'){el.src=e.data;el.alt=e.alt||'文章插图';}else{el.textContent=e.text;el.style.fontSize=e.size+'px';el.style.fontWeight=e.bold?'700':'400';el.style.color=e.color;el.style.lineHeight=e.h+'px';}
+   Object.assign(el.style,{position:'absolute',left:e.x+'px',top:e.y+'px',width:e.w+'px',height:e.h+'px',margin:'0',whiteSpace:'pre'});page.append(el);
+  }shell.append(page);paper.append(shell);
+ }
+ const count=ordered().filter(b=>b.type==='image');$('count').textContent=`${paper.children.length} 页 · ${count.filter(b=>b.data).length}/${count.length} 张图片可用`;
+ requestAnimationFrame(()=>{for(const shell of paper.children){const scale=shell.clientWidth/PAGE.width;shell.firstChild.style.transform=`scale(${scale})`;shell.style.height=PAGE.height*scale+'px';}});
 }
+window.addEventListener('resize',()=>{if(!$('workspace').hidden)render();});
 function gallery(){ $('media').replaceChildren();state.images.forEach((im,i)=>{const f=document.createElement('figure');if(im.data){const img=document.createElement('img');img.src=im.data;f.append(img);}const c=document.createElement('figcaption');c.textContent=`图片 ${i+1} · ${im.data?'已保存':'失败'}`;f.append(c);$('media').append(f);});render(); }
 const dataURL=blob=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(blob);});
 async function imageData(blob){const url=await dataURL(blob);const im=new Image();im.src=url;await im.decode();if(im.naturalWidth*im.naturalHeight>40000000)throw Error('图片像素过大');const c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(im,0,0);return {data:c.toDataURL('image/png'),width:c.width,height:c.height};}
@@ -27,31 +38,30 @@ $('uploads').onchange=async e=>{if(busy)return;lock(true);try{if($('workspace').
 for(const id of ['title','author','body'])$(id).addEventListener('input',render);
 function ready(){if(busy||reading)return false;if(!ordered().length){status('请先读取或输入正文',true);return false;}if(ordered().some(b=>b.type==='image'&&!b.data)&&!$('incomplete').checked){status('有图片未保存，请补充图片或勾选允许导出当前内容。',true);return false;}return true;}
 $('pdf').onclick=async()=>{
- if(!ready())return;lock(true);let host;
+ if(!ready())return;lock(true);
  try{
-  if(!window.html2canvas||!window.jspdf)throw Error('PDF 组件未加载，请刷新后重试');
-  status('正在分页生成 PDF…');
-  host=document.createElement('div');host.style='position:fixed;left:0;top:0;z-index:9999;width:740px;background:white;pointer-events:none';document.body.append(host);
-  const pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4'});
-  const pages=[];let page;
-  const newPage=()=>{page=document.createElement('article');page.className='pdf-page';pages.push(page);host.replaceChildren(page);};
-  newPage();
-  const flush=async()=>{await document.fonts.ready;const canvas=await html2canvas(page,{scale:1.6,backgroundColor:'#ffffff',logging:false,scrollX:0,scrollY:0,windowWidth:1000});if(pages.length>1)pdf.addPage();pdf.addImage(canvas.toDataURL('image/jpeg',.96),'JPEG',0,0,210,297);};
-  const append=async el=>{page.append(el);if(page.scrollHeight>1046 && page.children.length>1){el.remove();await flush();newPage();page.append(el);}};
-  const title=document.createElement('h1');title.textContent=$('title').value;await append(title);
-  const author=document.createElement('p');author.className='source';author.textContent=$('author').value;await append(author);
-  for(const b of ordered()){
-   if(b.type==='image'&&b.data){const im=document.createElement('img');im.src=b.data;im.alt=b.alt||'';await im.decode();await append(im);}
-   else if(b.type==='text'){for(const chunk of textChunks(b.text,450)){const p=document.createElement('p');p.textContent=chunk;await append(p);}}
+  if(!window.jspdf)throw Error('PDF 组件未加载，请刷新后重试');
+  await document.fonts.ready;const pages=layout();const pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4'});
+  for(let i=0;i<pages.length;i++){
+   status(`正在生成 PDF ${i+1}/${pages.length} 页…`);
+   const canvas=document.createElement('canvas');canvas.width=PAGE.width*2;canvas.height=PAGE.height*2;const ctx=canvas.getContext('2d');ctx.scale(2,2);ctx.fillStyle='#fff';ctx.fillRect(0,0,PAGE.width,PAGE.height);
+   for(const e of pages[i]){if(e.type==='image'){const im=new Image();im.src=e.data;await im.decode();ctx.drawImage(im,e.x,e.y,e.w,e.h);}else{ctx.font=`${e.bold?'bold ':''}${e.size}px ${FONT}`;ctx.fillStyle=e.color;ctx.textBaseline='middle';ctx.fillText(e.text,e.x,e.y+e.h/2);}}
+   if(i)pdf.addPage();pdf.addImage(canvas.toDataURL('image/jpeg',.97),'JPEG',0,0,210,297);
   }
-  if(state.source){const source=document.createElement('p');source.className='source';source.textContent='原文：'+state.source;await append(source);}
-  await flush();pdf.save(name('pdf'));status(`PDF 已生成：${pages.length} 页，开始下载。`);
- }catch(e){status('PDF 导出失败：'+e.message,true);}finally{host?.remove();lock(false);}
+  pdf.save(name('pdf'));status(`PDF 已生成：${pages.length} 页，与 PPT 使用同一排版。`);
+ }catch(e){status('PDF 导出失败：'+e.message,true);}finally{lock(false);}
 };
-$('ppt').onclick=async()=>{if(!ready())return;lock(true);try{if(!window.PptxGenJS)throw Error('PPT 组件未加载，请刷新后重试');status('正在生成可编辑 PPTX…');const ppt=new PptxGenJS();ppt.layout='LAYOUT_WIDE';ppt.author=$('author').value;ppt.subject=state.source;ppt.title=$('title').value;ppt.lang='zh-CN';
- const base=()=>{const s=ppt.addSlide();s.background={color:'F7F8FA'};s.addText('创作工具箱 · X 文章',{x:.6,y:7.06,w:11,h:.18,fontSize:9,color:'8993A2'});return s;};
- const cover=base();cover.addText($('title').value||'X 文章',{x:.8,y:1.5,w:11.7,h:2.6,fontSize:32,bold:true,color:'202734',fontFace:'Microsoft YaHei',breakLine:false,fit:'shrink'});cover.addText([$ ('author').value,state.source].filter(Boolean).join('\n'),{x:.85,y:4.8,w:11.5,h:1.0,fontSize:13,color:'6C7889',fontFace:'Microsoft YaHei',fit:'shrink'});
- let n=0;
- for(const b of ordered()){if(b.type==='text'){for(const chunk of textChunks(b.text)){const s=base();s.addText($('title').value.slice(0,65),{x:.6,y:.4,w:12,h:.5,fontSize:17,bold:true,color:'3267D9',fontFace:'Microsoft YaHei',fit:'shrink'});s.addText(chunk,{x:.75,y:1.25,w:11.8,h:5.3,fontSize:20,color:'283142',fontFace:'Microsoft YaHei',breakLine:false,fit:'shrink',paraSpaceAfterPt:12,margin:0});n++;}}else if(b.data){const s=base();const ratio=b.width/b.height;let w=11.8,h=w/ratio;if(h>5.9){h=5.9;w=h*ratio;}s.addImage({data:b.data,x:(13.333-w)/2,y:.6+(5.9-h)/2,w,h});n++;}}
- await ppt.writeFile({fileName:name('pptx')});status(`PPTX 已生成：封面 + ${n} 页正文与图片，文字可编辑。`);
- }catch(e){status('PPT 导出失败：'+e.message,true);}finally{lock(false);}};
+$('ppt').onclick=async()=>{
+ if(!ready())return;lock(true);
+ try{
+  if(!window.PptxGenJS)throw Error('PPT 组件未加载，请刷新后重试');
+  await document.fonts.ready;const pages=layout();status('正在生成与 PDF 同版式的 PPTX…');
+  const ppt=new PptxGenJS();const width=210/25.4,height=297/25.4,k=width/PAGE.width;
+  ppt.defineLayout({name:'ARTICLE_A4',width,height});ppt.layout='ARTICLE_A4';ppt.author=$('author').value;ppt.subject=state.source;ppt.title=$('title').value;ppt.lang='zh-CN';
+  for(const page of pages){const slide=ppt.addSlide();slide.background={color:'FFFFFF'};
+   for(const e of page){if(e.type==='image')slide.addImage({data:e.data,x:e.x*k,y:e.y*k,w:e.w*k,h:e.h*k});
+    else if(e.text)slide.addText(e.text,{x:e.x*k,y:e.y*k,w:e.w*k,h:e.h*k,fontSize:e.size*k*72,fontFace:'PingFang SC',bold:e.bold,color:e.color.slice(1),margin:0,vertAnchor:'ctr',valign:'mid',breakLine:false,wrap:false,paraSpaceAfterPt:0});}
+  }
+  await ppt.writeFile({fileName:name('pptx')});status(`PPTX 已生成：${pages.length} 页，与 PDF 同版式，文字可编辑。`);
+ }catch(e){status('PPT 导出失败：'+e.message,true);}finally{lock(false);}
+};
