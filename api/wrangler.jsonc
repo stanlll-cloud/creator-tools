@@ -1,0 +1,7 @@
+{
+  "name": "creator-tools-x-reader",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-10-09",
+  "workers_dev": true,
+  "ratelimits": [{"name":"REQUEST_LIMIT","namespace_id":"30871009","simple":{"limit":30,"period":60}}]
+}
