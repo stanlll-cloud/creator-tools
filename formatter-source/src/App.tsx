@@ -173,7 +173,7 @@ export default function App() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `CreatorTools_Article_${new Date().getTime()}.html`;
+        a.download = `离岸工具包_文章_${new Date().getTime()}.html`;
         a.click();
         URL.revokeObjectURL(url);
     };
@@ -183,7 +183,7 @@ export default function App() {
         const element = previewRef.current;
         const opt = {
             margin: 10,
-            filename: `CreatorTools_Article_${new Date().getTime()}.pdf`,
+            filename: `离岸工具包_文章_${new Date().getTime()}.pdf`,
             image: { type: 'jpeg' as const, quality: 0.98 },
             html2canvas: { scale: 2, useCORS: true, letterRendering: true, backgroundColor: document.documentElement.classList.contains('dark') ? '#000000' : '#ffffff' },
             jsPDF: { unit: 'mm' as const, format: 'a4', orientation: 'portrait' as const }

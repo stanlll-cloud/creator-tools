@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Markdown → X 文章</title>
+  <title>Markdown → X 文章 · 离岸工具包</title>
   <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
   <style>
     * {
@@ -564,7 +564,7 @@
 
     async function loadDraft() {
       try {
-        const res = await fetch('./draft.md?v=20261009-brand2');
+        const res = await fetch('./draft.md?v=20261014-offshore');
         if (!res.ok) return;
         const text = await res.text();
         // 从封面配置 JSON 块读取标题

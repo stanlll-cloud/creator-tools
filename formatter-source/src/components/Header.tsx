@@ -13,7 +13,7 @@ export default function Header({ themeMode, onToggleTheme }: HeaderProps) {
                 <div className="w-8 h-8 rounded-[8px] flex items-center justify-center bg-black dark:bg-white shadow-[0_2px_8px_rgba(0,0,0,0.15)] dark:shadow-[0_2px_12px_rgba(255,255,255,0.15)]">
                     <span className="text-white dark:text-black text-lg">✳</span>
                 </div>
-                <span className="font-bold text-lg tracking-tight text-black dark:text-white">创作工具箱<span className="hidden sm:inline"> · 公众号排版</span></span>
+                <span className="font-bold text-lg tracking-tight text-black dark:text-white">离岸工具包<span className="hidden sm:inline"> · 公众号排版</span></span>
             </div>
 
             <div className="flex flex-wrap items-center gap-3 text-xs">

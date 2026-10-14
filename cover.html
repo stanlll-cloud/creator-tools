@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>封面生成器 · Cover Maker</title>
+  <title>封面生成器 · Cover Maker · 离岸工具包</title>
   <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.min.js"></script>
   <!-- Brush font for 国风 templates (graceful serif fallback if offline) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2241,7 +2241,7 @@
 
     // ── Content sync ──────────────────────────────────────────────────────
     const DEFAULT = {
-      label: '创作工具箱',
+      label: '离岸工具包',
       title: '一个用 Claude 做的封面工具，开箱即用，亦可自由迭代',
       subtitle: '多次实践，数小时精心打磨',
       author: '你的名字',
@@ -3172,7 +3172,7 @@
     // ── 从 draft.md 读取封面元数据 ─────────────────────────────────────────
     async function loadDraftMeta() {
       try {
-        const res = await fetch('./draft.md?v=20261009-brand2');
+        const res = await fetch('./draft.md?v=20261014-offshore');
         if (!res.ok) return null;
         const text = await res.text();
         const get = (key) => {
