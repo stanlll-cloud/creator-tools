@@ -263,7 +263,7 @@
     .empty-hint svg { width: 36px; height: 36px; opacity: 0.4; }
   </style>
   <style id="theme-css"></style>
-<style>.grp-overlay,.grp-hbtn{display:none!important}</style></head>
+<style>.grp-overlay,.grp-hbtn{display:none!important}</style><script src="vendor/jszip.min.js"></script><script src="markdown-images.js?v=1"></script></head>
 
 <body>
 
@@ -396,30 +396,9 @@
     }
 
     // ── base64 图片 ──
-    function toBase64(src) {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-          canvas.getContext('2d').drawImage(img, 0, 0);
-          resolve(canvas.toDataURL());
-        };
-        img.onerror = reject;
-        img.src = src;
-      });
-    }
+    function toBase64(src) { return CreatorImages.png(src); }
+    async function inlineImages() { return CreatorImages.inline(preview); }
 
-    async function inlineImages() {
-      const imgs = preview.querySelectorAll('img');
-      await Promise.all(Array.from(imgs).map(async (img) => {
-        if (img.src.startsWith('data:')) return;
-        try { img.src = await toBase64(img.src); } catch (_) { }
-      }));
-    }
-
-    // ── alt 标注 ──
     function decorateImages() {
       preview.querySelectorAll('img:not([data-decorated])').forEach(img => {
         img.setAttribute('data-decorated', '1');
@@ -453,21 +432,7 @@
         const copyImgBtn = document.createElement('button');
         copyImgBtn.className = 'img-copy-b64-btn';
         copyImgBtn.textContent = '复制图片';
-        copyImgBtn.onclick = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-          canvas.getContext('2d').drawImage(img, 0, 0);
-          canvas.toBlob(async (blob) => {
-            try {
-              await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-              copyImgBtn.textContent = '✓';
-            } catch (_) {
-              copyImgBtn.textContent = '✗';
-            }
-            setTimeout(() => copyImgBtn.textContent = '复制图片', 1500);
-          }, 'image/png');
-        };
+        copyImgBtn.onclick = () => { CreatorImages.copyImage(img).then(()=>{copyImgBtn.textContent='✓ 已复制原图';}).catch(()=>{copyImgBtn.textContent='复制失败';}); };
         wrapper.appendChild(copyImgBtn);
       });
     }
@@ -677,12 +642,12 @@
       if (!input.value.trim()) { showToast('请先输入 Markdown 内容', { type: 'info' }); return; }
 
       const btn = document.getElementById('copy-btn');
-      const html = buildWechatHTML();
+      const htmlPromise = CreatorImages.prepare(preview).then(()=>new Blob([buildWechatHTML()],{type:'text/html'}));
 
       try {
         await navigator.clipboard.write([
           new ClipboardItem({
-            'text/html': new Blob([html], { type: 'text/html' }),
+            'text/html': htmlPromise,
             'text/plain': new Blob([input.value], { type: 'text/plain' }),
           })
         ]);
@@ -692,9 +657,9 @@
           btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> 复制到公众号`;
           btn.classList.remove('success');
         }, 3000);
-      } catch (_) {
-        await navigator.clipboard.writeText(input.value);
-        showToast('已复制纯文本', { type: 'info', description: '当前环境不支持富文本复制' });
+      } catch (error) {
+        CreatorImages.notice('图文复制失败：'+error.message+'。可逐张复制原图，或下载图片上传。');
+        showToast('图文复制失败', {type:'info',description:'请检查图片状态或浏览器剪贴板权限'});
       }
     }
 

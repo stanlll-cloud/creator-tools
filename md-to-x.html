@@ -371,7 +371,7 @@
       opacity: 0.4;
     }
   </style>
-<style>.grp-overlay,.grp-hbtn{display:none!important}</style></head>
+<style>.grp-overlay,.grp-hbtn{display:none!important}</style><script src="vendor/jszip.min.js"></script><script src="markdown-images.js?v=1"></script></head>
 
 <body>
 
@@ -420,7 +420,7 @@
 
     <!-- 右：预览 -->
     <div class="pane">
-      <div class="pane-header">预览（X 文章样式）</div>
+      <div class="pane-header">预览（X 文章样式；普通帖需单独添加图片）</div>
       <div id="preview">
         <div class="empty-hint">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -464,28 +464,8 @@
       setTimeout(() => btn.style.color = '', 1500);
     }
 
-    function toBase64(src) {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-          canvas.getContext('2d').drawImage(img, 0, 0);
-          resolve(canvas.toDataURL());
-        };
-        img.onerror = reject;
-        img.src = src;
-      });
-    }
-
-    async function inlineImages() {
-      const imgs = preview.querySelectorAll('img');
-      await Promise.all(Array.from(imgs).map(async (img) => {
-        if (img.src.startsWith('data:')) return;
-        try { img.src = await toBase64(img.src); } catch (_) { }
-      }));
-    }
+    function toBase64(src) { return CreatorImages.png(src); }
+    async function inlineImages() { return CreatorImages.inline(preview); }
 
     function decorateImages() {
       preview.querySelectorAll('img:not([data-decorated])').forEach(img => {
@@ -521,21 +501,7 @@
         const copyImgBtn = document.createElement('button');
         copyImgBtn.className = 'img-copy-b64-btn';
         copyImgBtn.textContent = '复制图片';
-        copyImgBtn.onclick = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-          canvas.getContext('2d').drawImage(img, 0, 0);
-          canvas.toBlob(async (blob) => {
-            try {
-              await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-              copyImgBtn.textContent = '✓';
-            } catch (_) {
-              copyImgBtn.textContent = '✗';
-            }
-            setTimeout(() => copyImgBtn.textContent = '复制图片', 1500);
-          }, 'image/png');
-        };
+        copyImgBtn.onclick = () => { CreatorImages.copyImage(img).then(()=>{copyImgBtn.textContent='✓ 已复制原图';}).catch(()=>{copyImgBtn.textContent='复制失败';}); };
         wrapper.appendChild(copyImgBtn);
       });
     }
@@ -570,17 +536,18 @@
         return;
       }
 
-      const html = preview.innerHTML;
+      const htmlPromise=CreatorImages.prepare(preview).then(()=>new Blob([CreatorImages.clean(preview).innerHTML],{type:'text/html'}));
       const btn = document.getElementById('copy-btn');
 
       try {
         await navigator.clipboard.write([
           new ClipboardItem({
-            'text/html': new Blob([html], { type: 'text/html' }),
+            'text/html': htmlPromise,
             'text/plain': new Blob([md], { type: 'text/plain' }),
           })
         ]);
-        btn.textContent = '✓ 已复制，去 X 粘贴';
+        btn.textContent = '✓ 已复制图文';
+        CreatorImages.notice('图文已写入剪贴板。若 X 仅接收文字，请点每张图片的「复制图片」粘贴原图；普通帖与长文章编辑器接收方式可能不同。');
         btn.classList.add('success');
         setTimeout(() => {
           btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -591,8 +558,7 @@
         }, 3000);
       } catch (err) {
         // 降级：复制纯文本
-        await navigator.clipboard.writeText(md);
-        alert('富文本复制不支持，已复制纯文本（需手动格式化）');
+        CreatorImages.notice('图文复制失败：'+err.message+'。请检查图片状态或浏览器权限，再重试。');
       }
     }
 
