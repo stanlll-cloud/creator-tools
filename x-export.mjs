@@ -3,7 +3,7 @@ const API='https://creator-tools-x-reader.stanlll-creator-tools.workers.dev';
 const $=id=>document.getElementById(id);
 let state={source:'',blocks:[],warnings:[],images:[]},busy=false,reading=false;
 function status(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error);}
-function lock(on){busy=on;for(const id of ['pdf','ppt','read','manual','uploads'])$(id).disabled=on;}
+function lock(on){busy=on;for(const id of ['pdf','ppt','keynote','read','manual','uploads'])$(id).disabled=on;}
 function name(ext){return ($('title').value||'X文章').replace(/[\\/:*?"<>|\x00-\x1f]/g,'_').slice(0,70)+'.'+ext;}
 function textChunks(text,max=380){const chars=Array.from(text),out=[];for(let i=0;i<chars.length;i+=max)out.push(chars.slice(i,i+max).join(''));return out;}
 function ordered(){const out=[];for(const part of $('body').value.split(/(\{\{image:\d+\}\})/)){const m=part.match(/^\{\{image:(\d+)\}\}$/);if(m){const image=state.images[Number(m[1])-1];if(image)out.push({type:'image',...image});}else for(const t of part.split(/\n\s*\n/)){if(t.trim())out.push({type:'text',text:t.trim()});}}return out;}
@@ -29,7 +29,7 @@ const dataURL=blob=>new Promise((resolve,reject)=>{const r=new FileReader();r.on
 async function imageData(blob){const url=await dataURL(blob);const im=new Image();im.src=url;await im.decode();if(im.naturalWidth*im.naturalHeight>40000000)throw Error('图片像素过大');const c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(im,0,0);return {data:c.toDataURL('image/png'),width:c.width,height:c.height};}
 function fill(doc){state={...doc,images:[]};$('title').value=doc.title||'';$('author').value=doc.author||'';$('body').value=doc.blocks.map(b=>{if(b.type==='image'){state.images.push(b);return '{{image:'+state.images.length+'}}';}return b.text||'';}).join('\n\n');$('incomplete').checked=false;$('workspace').hidden=false;gallery();}
 $('extract').addEventListener('submit',async e=>{e.preventDefault();if(busy)return;reading=true;lock(true);status('正在读取公开正文…');try{
- const response=await fetch(API+'/api/extract?url='+encodeURIComponent($('url').value.trim()),{signal:AbortSignal.timeout(35000)});const doc=await response.json();if(!response.ok)throw Error(doc.error||'提取失败');fill(doc);
+ const response=await fetch(API+'/api/extract?url='+encodeURIComponent($('url').value.trim()),{signal:AbortSignal.timeout(45000)});const doc=await response.json();if(!response.ok)throw Error(doc.error||'提取失败');fill(doc);
  for(let i=0;i<state.images.length;i++){status(`正文已读取，正在保存图片 ${i+1}/${state.images.length}…`);try{const r=await fetch(API+'/api/image?url='+encodeURIComponent(state.images[i].url),{signal:AbortSignal.timeout(25000)});if(!r.ok)throw Error();Object.assign(state.images[i],await imageData(await r.blob()));}catch{state.images[i].error=true;}gallery();}
  const failed=state.images.filter(im=>!im.data).length;status(`读取完成：${state.images.length-failed}/${state.images.length} 张图片已保存。\n${failed?'有图片下载失败，请核对原文。\n':''}${state.warnings.join('\n')}`,failed>0);
  }catch(err){status('读取失败：'+err.message+'。可以展开「手动粘贴正文」继续。',true);}finally{reading=false;lock(false);}});
@@ -51,7 +51,7 @@ $('pdf').onclick=async()=>{
   pdf.save(name('pdf'));status(`PDF 已生成：${pages.length} 页，与 PPT 使用同一排版。`);
  }catch(e){status('PDF 导出失败：'+e.message,true);}finally{lock(false);}
 };
-$('ppt').onclick=async()=>{
+async function exportPpt(keynote=false){
  if(!ready())return;lock(true);
  try{
   if(!window.PptxGenJS)throw Error('PPT 组件未加载，请刷新后重试');
@@ -62,6 +62,9 @@ $('ppt').onclick=async()=>{
    for(const e of page){if(e.type==='image')slide.addImage({data:e.data,x:e.x*k,y:e.y*k,w:e.w*k,h:e.h*k});
     else if(e.text)slide.addText(e.text,{x:e.x*k,y:e.y*k,w:e.w*k,h:e.h*k,fontSize:e.size*k*72,fontFace:'PingFang SC',bold:e.bold,color:e.color.slice(1),margin:0,vertAnchor:'ctr',valign:'mid',breakLine:false,wrap:false,paraSpaceAfterPt:0});}
   }
-  await ppt.writeFile({fileName:name('pptx')});status(`PPTX 已生成：${pages.length} 页，与 PDF 同版式，文字可编辑。`);
+  await ppt.writeFile({fileName:name('pptx')});status(keynote?`Keynote 兼容文稿已下载（PPTX），共 ${pages.length} 页。用 Keynote 打开后，选择「文件 → 存储」保存为 .key。`:`PPTX 已生成：${pages.length} 页，与 PDF 同版式，文字可编辑。`);
  }catch(e){status('PPT 导出失败：'+e.message,true);}finally{lock(false);}
 };
+
+$('ppt').onclick=()=>exportPpt(false);
+$('keynote').onclick=()=>exportPpt(true);

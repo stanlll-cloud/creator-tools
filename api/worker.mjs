@@ -1,3 +1,4 @@
+import {extractWeb,publicURL} from './web-reader.mjs';
 import {postId,normalize} from './normalize.mjs';
 const origins=new Set(['https://stanlll-cloud.github.io','http://127.0.0.1:3087','http://localhost:3087']);
 export default {async fetch(req,env){
@@ -12,18 +13,20 @@ export default {async fetch(req,env){
   const u=new URL(req.url);
   if(u.pathname==='/health')return json({ok:true,version:1});
   if(u.pathname==='/api/extract'){
-   const source=u.searchParams.get('url')||'';const id=postId(source);
+   const source=u.searchParams.get('url')||'';const target=publicURL(source);
+   if(!['x.com','www.x.com','twitter.com','www.twitter.com'].includes(target.hostname))return json(await extractWeb(source));
+   const id=postId(source);
    let r=await fetch(`https://api.fxtwitter.com/2/status/${id}`,{headers:{'User-Agent':'CreatorTools/1.0','Accept':'application/json'},signal:AbortSignal.timeout(15000)});
    if(!r.ok)r=await fetch(`https://api.fxtwitter.com/status/${id}`,{headers:{'User-Agent':'CreatorTools/1.0','Accept':'application/json'},signal:AbortSignal.timeout(15000)});
    if(!r.ok)throw Error('提取服务暂不可用（'+r.status+'），请稍后重试或手动粘贴');
    return json(normalize(await r.json(),source));
   }
   if(u.pathname==='/api/image'){
-   const image=new URL(u.searchParams.get('url')||'');
-   if(image.protocol!=='https:'||image.hostname!=='pbs.twimg.com'||!/^\/(media|tweet_video_thumb|ext_tw_video_thumb|amplify_video_thumb)\//.test(image.pathname))return json({error:'不支持的图片来源'},400);
-   const r=await fetch(image,{redirect:'manual',signal:AbortSignal.timeout(20000)});
+   const image=publicURL(u.searchParams.get('url')||'');
+   let current=image,r;
+   for(let hop=0;hop<4;hop++){r=await fetch(current,{redirect:'manual',headers:{'User-Agent':'Mozilla/5.0 (compatible; CreatorTools/1.0)','Accept':'image/*'},signal:AbortSignal.timeout(20000)});if(r.status>=300&&r.status<400){current=publicURL(new URL(r.headers.get('Location')||'',current).href);continue;}break;}
    const type=r.headers.get('Content-Type')||'';
-   if(!r.ok||!/^image\/(jpeg|png|webp|gif)(;|$)/.test(type))throw Error('图片下载失败');
+   if(!r.ok||!/^image\/(jpeg|png|webp|gif)(;|$)/.test(type))throw Error('图片下载失败（'+r.status+'）');
    if(Number(r.headers.get('Content-Length')||0)>15000000)throw Error('图片超过 15MB');
    const reader=r.body.getReader();let size=0,chunks=[];
    while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>15000000){await reader.cancel();throw Error('图片超过 15MB');}chunks.push(value);}

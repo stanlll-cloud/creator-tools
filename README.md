@@ -32,3 +32,8 @@ PDF 为逐页图像排版版，PPTX 正文是独立可编辑文本框，图片�
 浏览器导出使用 PptxGenJS 3.12.0、html2canvas 1.4.1、jsPDF 2.5.2，许可证位于 vendor/。
 
 PDF、PPTX 与页面预览共用 export-layout.mjs 的 A4 纵版坐标和分页；连续插图按比例拼排，PPT 使用原生文字与图片对象。不同电脑字体替换可能产生字形差异。
+
+## 普通网页与 Keynote
+
+公开 HTTPS 网页优先使用 Worker HTMLRewriter 提取静态正文和插图；失败时尝试 Jina Reader。可能无法提取动态、登录或付费墙文章。请核对预览及图片数量。
+Keynote 按钮下载兼容 PPTX，保留可编辑文字和图片；不是原生 .key。用户在苹果 Keynote 打开后可保存为 .key。
