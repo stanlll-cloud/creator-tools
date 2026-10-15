@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "离岸工具包 · X 灵感采集助手",
+  "version": "0.1.0",
+  "description": "将正在浏览的 X 帖子保存在本机，连接离岸工具包灵感库。",
+  "permissions": [
+    "storage"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://x.com/*",
+        "https://twitter.com/*"
+      ],
+      "js": [
+        "collect.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://stanlll-cloud.github.io/creator-tools/*",
+        "http://localhost/*",
+        "http://127.0.0.1/*"
+      ],
+      "js": [
+        "bridge.js"
+      ]
+    }
+  ]
+}
